@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
@@ -7,6 +6,7 @@ import MapComponent from "./MapComponent";
 import WaypointList from "./WaypointList";
 import MissionControls from "./MissionControls";
 import TelemetryPanel from "./TelemetryPanel";
+import { calculateOptimizedPath } from "../utils/pathOptimizer";
 
 type Waypoint = {
   id: string;
@@ -89,15 +89,10 @@ const FlightPathOptimizerLayout: React.FC = () => {
     setOptimizationInProgress(true);
     setOptimizationComplete(false);
     
-    // This would implement an actual path optimization algorithm
-    // For demo purposes, we'll just reorder the waypoints after a delay
+    // Use Dijkstra's algorithm to optimize the path
     setTimeout(() => {
-      // Calculate optimized path (simple randomization for demo)
-      const optimizedWaypoints = [...waypoints];
-      for (let i = optimizedWaypoints.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [optimizedWaypoints[i], optimizedWaypoints[j]] = [optimizedWaypoints[j], optimizedWaypoints[i]];
-      }
+      // Calculate the optimized path using our path optimizer utility
+      const optimizedWaypoints = calculateOptimizedPath([...waypoints]);
       
       // Update waypoints and end animation
       setWaypoints(optimizedWaypoints);
@@ -107,7 +102,7 @@ const FlightPathOptimizerLayout: React.FC = () => {
       
       toast({
         title: "Path optimized",
-        description: "Flight path has been optimized for efficiency"
+        description: "Flight path has been optimized using Dijkstra's algorithm"
       });
     }, 3000); // 3-second animation for demonstration
   };

@@ -29,11 +29,13 @@ const MapComponent: React.FC<MapComponentProps> = ({
   const [simulatedPosition, setSimulatedPosition] = useState<number>(0);
   const [animationFrameId, setAnimationFrameId] = useState<number | null>(null);
   const [originalWaypoints, setOriginalWaypoints] = useState<Waypoint[]>([]);
+  const [visitedWaypoints, setVisitedWaypoints] = useState<Set<string>>(new Set());
 
   // Store original waypoints before optimization starts
   useEffect(() => {
     if (!optimizationInProgress) {
       setOriginalWaypoints([...waypoints]);
+      setVisitedWaypoints(new Set());
     }
   }, [waypoints, optimizationInProgress]);
 
@@ -41,6 +43,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
   useEffect(() => {
     if (optimizationInProgress) {
       setSimulatedPosition(0);
+      setVisitedWaypoints(new Set());
       startAnimation();
     } else if (animationFrameId) {
       cancelAnimationFrame(animationFrameId);
@@ -59,8 +62,26 @@ const MapComponent: React.FC<MapComponentProps> = ({
   const startAnimation = () => {
     const animate = () => {
       setSimulatedPosition(prevPosition => {
-        // Complete a full circuit in about 3 seconds (60 frames at 60fps = ~3s for 1.0)
+        // Complete a full circuit in about 3 seconds
         const newPosition = prevPosition + 0.016;
+        
+        // Track visited waypoints during animation
+        if (waypoints.length > 1) {
+          const totalWaypoints = waypoints.length;
+          const completedSegments = Math.min(Math.floor(newPosition * (totalWaypoints - 1)), totalWaypoints - 1);
+          
+          // Mark waypoints as visited
+          setVisitedWaypoints(prev => {
+            const updated = new Set(prev);
+            for (let i = 0; i <= completedSegments; i++) {
+              if (i < waypoints.length) {
+                updated.add(waypoints[i].id);
+              }
+            }
+            return updated;
+          });
+        }
+        
         return newPosition >= 1 ? 1 : newPosition;
       });
       
@@ -172,7 +193,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
     const lat = currentWp.lat + (nextWp.lat - currentWp.lat) * segmentProgress;
     const lng = currentWp.lng + (nextWp.lng - currentWp.lng) * segmentProgress;
     
-    // Render a drone at each waypoint that has been "visited"
+    // Render a drone at the current position and markers at visited waypoints
     return (
       <>
         {/* Main animated drone */}
@@ -245,7 +266,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
         {optimizationComplete && waypoints.length >= 2 && (
           <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-success text-success-foreground px-4 py-2 rounded-md shadow-md animate-fade-in">
             <p className="font-medium">Path optimization complete!</p>
-            <p className="text-sm">All waypoints covered in optimal order.</p>
+            <p className="text-sm">All waypoints covered in optimal order using Dijkstra's algorithm.</p>
           </div>
         )}
       </div>
