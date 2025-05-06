@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
@@ -18,10 +18,20 @@ type Waypoint = {
 const FlightPathOptimizerLayout: React.FC = () => {
   const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
   const [missionActive, setMissionActive] = useState(false);
+  const [optimizationInProgress, setOptimizationInProgress] = useState(false);
+  const [optimizationComplete, setOptimizationComplete] = useState(false);
   const { toast } = useToast();
+
+  // Reset optimization state when waypoints change
+  useEffect(() => {
+    if (waypoints.length < 3) {
+      setOptimizationComplete(false);
+    }
+  }, [waypoints]);
 
   const handleWaypointAdded = (waypoint: Waypoint) => {
     setWaypoints([...waypoints, waypoint]);
+    setOptimizationComplete(false);
     toast({
       title: "Waypoint Added",
       description: `Waypoint ${waypoints.length + 1} added at ${waypoint.lat.toFixed(6)}, ${waypoint.lng.toFixed(6)}`,
@@ -32,25 +42,53 @@ const FlightPathOptimizerLayout: React.FC = () => {
     setWaypoints(waypoints.map(wp => 
       wp.id === id ? { ...wp, [field]: value } : wp
     ));
+    setOptimizationComplete(false);
   };
 
   const handleWaypointDelete = (id: string) => {
     setWaypoints(waypoints.filter(wp => wp.id !== id));
+    setOptimizationComplete(false);
   };
 
   const handleClearWaypoints = () => {
     setWaypoints([]);
+    setOptimizationComplete(false);
   };
 
   const handleOptimizePath = () => {
-    // This would implement an actual path optimization algorithm
-    // For demo purposes, we'll just reorder the waypoints
-    const optimizedWaypoints = [...waypoints];
-    for (let i = optimizedWaypoints.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [optimizedWaypoints[i], optimizedWaypoints[j]] = [optimizedWaypoints[j], optimizedWaypoints[i]];
+    if (waypoints.length < 3) {
+      toast({
+        title: "Cannot optimize path",
+        description: "You need at least 3 waypoints to optimize a path",
+        variant: "destructive"
+      });
+      return;
     }
-    setWaypoints(optimizedWaypoints);
+    
+    // Start the optimization animation
+    setOptimizationInProgress(true);
+    setOptimizationComplete(false);
+    
+    // This would implement an actual path optimization algorithm
+    // For demo purposes, we'll just reorder the waypoints after a delay
+    setTimeout(() => {
+      const optimizedWaypoints = [...waypoints];
+      // Simple optimization algorithm (this would be more sophisticated in a real app)
+      for (let i = optimizedWaypoints.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [optimizedWaypoints[i], optimizedWaypoints[j]] = [optimizedWaypoints[j], optimizedWaypoints[i]];
+      }
+      
+      // Update waypoints and end animation
+      setWaypoints(optimizedWaypoints);
+      setOptimizationInProgress(false);
+      setOptimizationComplete(true);
+      
+      toast({
+        title: "Path optimized",
+        description: "Flight path has been optimized for efficiency"
+      });
+    }, 3000); // 3-second animation for demonstration
   };
 
   const simulatedCurrentPosition = waypoints.length > 0 
@@ -90,6 +128,8 @@ const FlightPathOptimizerLayout: React.FC = () => {
                 waypoints={waypoints}
                 onWaypointAdded={handleWaypointAdded}
                 currentPosition={simulatedCurrentPosition}
+                optimizationInProgress={optimizationInProgress}
+                optimizationComplete={optimizationComplete}
               />
             </div>
             
