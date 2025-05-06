@@ -28,6 +28,14 @@ const MapComponent: React.FC<MapComponentProps> = ({
   const [mapMessage, setMapMessage] = useState<string>("Map loading...");
   const [simulatedPosition, setSimulatedPosition] = useState<number>(0);
   const [animationFrameId, setAnimationFrameId] = useState<number | null>(null);
+  const [originalWaypoints, setOriginalWaypoints] = useState<Waypoint[]>([]);
+
+  // Store original waypoints before optimization starts
+  useEffect(() => {
+    if (!optimizationInProgress) {
+      setOriginalWaypoints([...waypoints]);
+    }
+  }, [waypoints, optimizationInProgress]);
 
   // Reset animation when optimization starts or stops
   useEffect(() => {
@@ -102,7 +110,10 @@ const MapComponent: React.FC<MapComponentProps> = ({
   }, [onWaypointAdded]);
 
   const renderWaypoints = () => {
-    return waypoints.map((wp, index) => (
+    // Use the original waypoints for rendering during animation
+    const pointsToRender = waypoints;
+    
+    return pointsToRender.map((wp, index) => (
       <div 
         key={wp.id}
         className="absolute w-5 h-5 bg-primary rounded-full text-white text-xs flex items-center justify-center transform -translate-x-1/2 -translate-y-1/2"
@@ -161,18 +172,35 @@ const MapComponent: React.FC<MapComponentProps> = ({
     const lat = currentWp.lat + (nextWp.lat - currentWp.lat) * segmentProgress;
     const lng = currentWp.lng + (nextWp.lng - currentWp.lng) * segmentProgress;
     
+    // Render a drone at each waypoint that has been "visited"
     return (
-      <div 
-        className="absolute w-6 h-6 bg-accent rounded-full animate-pulse-subtle flex items-center justify-center transform -translate-x-1/2 -translate-y-1/2"
-        style={{
-          left: `${50 + (lng + 74.0060) * 500}%`,
-          top: `${50 + (lat - 40.7128) * 500}%`,
-          zIndex: 100,
-          transition: 'left 0.1s ease-out, top 0.1s ease-out'
-        }}
-      >
-        <div className="w-3 h-3 bg-white rounded-full" />
-      </div>
+      <>
+        {/* Main animated drone */}
+        <div 
+          className="absolute w-6 h-6 bg-accent rounded-full animate-pulse-subtle flex items-center justify-center transform -translate-x-1/2 -translate-y-1/2"
+          style={{
+            left: `${50 + (lng + 74.0060) * 500}%`,
+            top: `${50 + (lat - 40.7128) * 500}%`,
+            zIndex: 100,
+            transition: 'left 0.1s ease-out, top 0.1s ease-out'
+          }}
+        >
+          <div className="w-3 h-3 bg-white rounded-full" />
+        </div>
+        
+        {/* Render "visited" markers at each waypoint the drone has passed */}
+        {waypoints.slice(0, completedSegments + 1).map((wp, index) => (
+          <div 
+            key={`visited-${wp.id}`}
+            className="absolute w-2 h-2 bg-success rounded-full transform -translate-x-1/2 -translate-y-1/2"
+            style={{
+              left: `${50 + (wp.lng + 74.0060) * 500}%`,
+              top: `${50 + (wp.lat - 40.7128) * 500}%`,
+              zIndex: 99
+            }}
+          />
+        ))}
+      </>
     );
   };
 

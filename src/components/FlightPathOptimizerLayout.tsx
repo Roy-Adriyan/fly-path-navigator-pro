@@ -20,7 +20,17 @@ const FlightPathOptimizerLayout: React.FC = () => {
   const [missionActive, setMissionActive] = useState(false);
   const [optimizationInProgress, setOptimizationInProgress] = useState(false);
   const [optimizationComplete, setOptimizationComplete] = useState(false);
+  // Store original waypoint order for animation
+  const [originalWaypoints, setOriginalWaypoints] = useState<Waypoint[]>([]);
+  const [displayWaypoints, setDisplayWaypoints] = useState<Waypoint[]>([]);
   const { toast } = useToast();
+
+  // Update display waypoints whenever actual waypoints change
+  useEffect(() => {
+    if (!optimizationInProgress) {
+      setDisplayWaypoints([...waypoints]);
+    }
+  }, [waypoints, optimizationInProgress]);
 
   // Reset optimization state when waypoints change
   useEffect(() => {
@@ -30,7 +40,9 @@ const FlightPathOptimizerLayout: React.FC = () => {
   }, [waypoints]);
 
   const handleWaypointAdded = (waypoint: Waypoint) => {
-    setWaypoints([...waypoints, waypoint]);
+    const updatedWaypoints = [...waypoints, waypoint];
+    setWaypoints(updatedWaypoints);
+    setDisplayWaypoints([...updatedWaypoints]);
     setOptimizationComplete(false);
     toast({
       title: "Waypoint Added",
@@ -39,19 +51,24 @@ const FlightPathOptimizerLayout: React.FC = () => {
   };
 
   const handleWaypointChange = (id: string, field: keyof Waypoint, value: number) => {
-    setWaypoints(waypoints.map(wp => 
+    const updatedWaypoints = waypoints.map(wp => 
       wp.id === id ? { ...wp, [field]: value } : wp
-    ));
+    );
+    setWaypoints(updatedWaypoints);
+    setDisplayWaypoints([...updatedWaypoints]);
     setOptimizationComplete(false);
   };
 
   const handleWaypointDelete = (id: string) => {
-    setWaypoints(waypoints.filter(wp => wp.id !== id));
+    const updatedWaypoints = waypoints.filter(wp => wp.id !== id);
+    setWaypoints(updatedWaypoints);
+    setDisplayWaypoints([...updatedWaypoints]);
     setOptimizationComplete(false);
   };
 
   const handleClearWaypoints = () => {
     setWaypoints([]);
+    setDisplayWaypoints([]);
     setOptimizationComplete(false);
   };
 
@@ -65,6 +82,9 @@ const FlightPathOptimizerLayout: React.FC = () => {
       return;
     }
     
+    // Store the original waypoints
+    setOriginalWaypoints([...waypoints]);
+    
     // Start the optimization animation
     setOptimizationInProgress(true);
     setOptimizationComplete(false);
@@ -72,8 +92,8 @@ const FlightPathOptimizerLayout: React.FC = () => {
     // This would implement an actual path optimization algorithm
     // For demo purposes, we'll just reorder the waypoints after a delay
     setTimeout(() => {
+      // Calculate optimized path (simple randomization for demo)
       const optimizedWaypoints = [...waypoints];
-      // Simple optimization algorithm (this would be more sophisticated in a real app)
       for (let i = optimizedWaypoints.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [optimizedWaypoints[i], optimizedWaypoints[j]] = [optimizedWaypoints[j], optimizedWaypoints[i]];
@@ -81,6 +101,7 @@ const FlightPathOptimizerLayout: React.FC = () => {
       
       // Update waypoints and end animation
       setWaypoints(optimizedWaypoints);
+      setDisplayWaypoints([...optimizedWaypoints]);
       setOptimizationInProgress(false);
       setOptimizationComplete(true);
       
@@ -125,7 +146,7 @@ const FlightPathOptimizerLayout: React.FC = () => {
           <div className="flex-grow flex lg:flex-row flex-col p-4 space-x-0 space-y-4 lg:space-y-0 lg:space-x-4 overflow-auto">
             <div className="w-full lg:w-2/3 h-[400px] lg:h-full">
               <MapComponent 
-                waypoints={waypoints}
+                waypoints={displayWaypoints}
                 onWaypointAdded={handleWaypointAdded}
                 currentPosition={simulatedCurrentPosition}
                 optimizationInProgress={optimizationInProgress}
